@@ -26,6 +26,10 @@ public class MainActivity extends AppCompatActivity {
         // Adding a click listener
         buttonPlay.setOnClickListener(buttonPlayClickListener);
 
+        //initialSpeed
+        /*InitialSpeedSurface initialSpeedSurface = new InitialSpeedSurface(this);
+        setContentView(initialSpeedSurface);*/
+
     }
 
 
