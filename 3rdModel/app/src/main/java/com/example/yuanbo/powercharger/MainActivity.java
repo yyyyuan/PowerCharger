@@ -68,8 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
     ImageButton.OnClickListener buttonScoreClickListener = new ImageButton.OnClickListener() {
         public void onClick(View view) {
-            //Intent intent = new Intent(MainActivity.this, HighScore.class);
-            Intent intent = new Intent(MainActivity.this, NavigationDrawer.class);
+            Intent intent = new Intent(MainActivity.this, HighScore.class);
             startActivity(intent);
         }
     };
