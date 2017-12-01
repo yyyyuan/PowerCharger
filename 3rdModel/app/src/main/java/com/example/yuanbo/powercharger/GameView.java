@@ -17,8 +17,6 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.Toast;
 
-import com.example.yuanbo.powercharger.view.GameEventListener;
-
 import java.util.ArrayList;
 
 /**
@@ -28,8 +26,6 @@ import java.util.ArrayList;
 public class GameView extends SurfaceView implements Runnable, SensorEventListener {
     // boolean variable to track if the game is playing or not
     volatile boolean playing;
-
-    GameActivity.MediaProjectionCallback mediaProjectionCallback;
 
     //the game thread
     private Thread gameThread = null;
@@ -99,7 +95,7 @@ public class GameView extends SurfaceView implements Runnable, SensorEventListen
     Sensor mSensor = null;
 
     private static final int SHAKE_THRESHOLD = 80;
-    private GameEventListener listener;
+
     /*
     //Class constructor
     public GameView(Context context) {
@@ -114,19 +110,11 @@ public class GameView extends SurfaceView implements Runnable, SensorEventListen
     }
     */
 
-    public GameEventListener getListener() {
-        return listener;
-    }
 
-    public void setListener(GameEventListener listener) {
-        this.listener = listener;
-    }
-
-    public GameView(Context context, int screenX, int screenY, GameActivity.MediaProjectionCallback callback) {
+    public GameView(Context context, int screenX, int screenY) {
         super(context);
 
         this.screenX = screenX;
-        mediaProjectionCallback = callback;
         countMisses = 0;
         isGameOver = false;
 
@@ -515,9 +503,6 @@ public class GameView extends SurfaceView implements Runnable, SensorEventListen
 
         //if the game's over, tappin on game Over screen sends you to MainActivity
         if(isGameOver){
-            mediaProjectionCallback.onStop();
-            listener.onUpdateScore(score);
-            listener.onShowLeaderboardsRequested();
             if(motionEvent.getAction() == MotionEvent.ACTION_DOWN){
                 context.startActivity(new Intent(context,MainActivity.class));
             }
