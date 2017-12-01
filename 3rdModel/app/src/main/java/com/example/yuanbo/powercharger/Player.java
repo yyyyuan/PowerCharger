@@ -96,7 +96,7 @@ public class Player {
     //Method to update coordinate of character
     public void update(){
 
-        if (hSpeed > 50) hSpeed *= 0.9999;
+        if (hSpeed > 20) hSpeed *= 0.999;
         else hSpeed -= 1;
 
         if (hBoosting) {
