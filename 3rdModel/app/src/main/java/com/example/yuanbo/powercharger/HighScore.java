@@ -25,7 +25,9 @@ public class HighScore extends AppCompatActivity {
         textView2 = (TextView) findViewById(R.id.textView2);
         textView3 = (TextView) findViewById(R.id.textView3);
         textView4 = (TextView) findViewById(R.id.textView4);
+
         sharedPreferences  = getSharedPreferences("SHAR_PREF_NAME", Context.MODE_PRIVATE);
+
         //setting the values to the textViews
         textView.setText("1. "+sharedPreferences.getInt("score1",0));
         textView2.setText("2. "+sharedPreferences.getInt("score2",0));
