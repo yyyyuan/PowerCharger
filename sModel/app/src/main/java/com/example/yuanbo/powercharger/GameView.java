@@ -122,11 +122,10 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
         }
         //update player
         player.update(player.getX() + controlSpeed, player.getY());
-        //enemies impact
+        //update enemies
         Iterator<Spirit> iterator = enemyList.iterator();
         while (iterator.hasNext()) {
             Spirit enemy = iterator.next();
-            //update enemy
             enemy.update(enemy.getX(), (int) (enemy.getY() + speed));
             //boom
             if (player.impact(enemy)) {
@@ -145,7 +144,7 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
         controlSpeed = (int) (-sensorX) * 2;//sensorX<0 move right;sensorX>0 move left
         speed -= 0.2;//decrease gentle
         distance += speed;
-        score = (int) distance / 10;
+        score = (int) distance / 1000;
     }
 
     private void draw() {
