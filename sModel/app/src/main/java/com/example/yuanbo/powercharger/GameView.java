@@ -35,7 +35,7 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
     //game thread
     private Thread gameThread = null;
     //draw
-    private Paint paint;
+    private Paint paint= new Paint();;
     private Canvas canvas;
     private SurfaceHolder surfaceHolder;
     //game parameter
@@ -72,7 +72,6 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
         super(context);
         this.context = context;
         surfaceHolder = getHolder();
-        paint = new Paint();
         this.screenX = screenX;
         this.screenY = screenY;
         //init score
@@ -151,8 +150,9 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
         //checking if surface is valid
         if (surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
-            canvas.drawRGB(255, 255, 255);
+            drawBackground();
             //draw score
+            paint.setColor(Color.BLACK);
             paint.setTextSize(30);
             canvas.drawText("Score: " + score, 100, 50, paint);
             //draw player
@@ -170,6 +170,19 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
             }
             //Unlocking the canvas
             surfaceHolder.unlockCanvasAndPost(canvas);
+        }
+    }
+
+    private void drawBackground() {
+        canvas.drawRGB(0xFF, 0xFF, 0xCC);
+        paint.setColor(Color.rgb(0x66,0x00,0x00));
+        final int space = 30;   //gap
+        int vertz = 0, hortz = 0;
+        for (int i = 0; i < 100; i++) {
+            canvas.drawLine(0, vertz, screenX, vertz, paint);
+            canvas.drawLine(hortz, 0, hortz, screenY, paint);
+            vertz += space;
+            hortz += space;
         }
     }
 
@@ -250,7 +263,7 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
     public void surfaceCreated(SurfaceHolder holder) {
         if (surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
-            canvas.drawRGB(255, 255, 255);
+            drawBackground();
             Bitmap arrow = BitmapFactory.decodeResource(context.getResources(), R.drawable.arrow);
             canvas.drawBitmap(player.getBitmap(), player.getX(), player.getY(), paint);
             canvas.drawBitmap(arrow, (screenX - arrow.getWidth()) / 2, player.getY() - playerHeight - arrow.getHeight(), paint);
