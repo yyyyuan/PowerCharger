@@ -8,7 +8,7 @@
     android:paddingTop="150dp"
     android:orientation="vertical"
     tools:context="com.example.yuanbo.powercharger.HighScore"
-    android:background="@drawable/splash">
+    android:background="#8066CCFF">
 
     <TextView
         android:textAlignment="center"

@@ -3,9 +3,16 @@ package com.example.yuanbo.powercharger;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Point;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Display;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -16,13 +23,53 @@ public class MainActivity extends AppCompatActivity {
     //high score button
     private ImageButton buttonScore;
 
+    //draw
+    private Paint paint = new Paint();
+    private Canvas canvas;
+    private SurfaceHolder surfaceHolder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+
+        SurfaceView surface = (SurfaceView) findViewById(R.id.surface);
+        surface.getHolder().addCallback(new SurfaceHolder.Callback() {
+
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                //Getting display object
+                Display display = getWindowManager().getDefaultDisplay();
+
+                //Getting the screen resolution into point object
+                Point size = new Point();
+                display.getSize(size);
+
+                if (holder.getSurface().isValid()) {
+                    canvas = holder.lockCanvas();
+                    drawBackground(size);
+                    holder.unlockCanvasAndPost(canvas);
+                }
+
+                // Do some drawing when surface is ready
+                //Canvas canvas = holder.lockCanvas();
+                //canvas.drawColor(Color.RED);
+                //holder.unlockCanvasAndPost(canvas);
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            }
+        });
+
         //setting the orientation to landscape
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         // Get the button
         buttonPlay = (ImageButton) findViewById(R.id.buttonPlay);
@@ -33,11 +80,6 @@ public class MainActivity extends AppCompatActivity {
         buttonPlay.setOnClickListener(buttonPlayClickListener);
         // Adding a click listener
         buttonScore.setOnClickListener(buttonScoreClickListener);
-
-        //initialSpeed
-        /*InitialSpeedSurface initialSpeedSurface = new InitialSpeedSurface(this);
-        setContentView(initialSpeedSurface);*/
-
     }
 
     @Override
@@ -69,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     ImageButton.OnClickListener buttonScoreClickListener = new ImageButton.OnClickListener() {
         public void onClick(View view) {
             //Intent intent = new Intent(MainActivity.this, HighScore.class);
-            Intent intent = new Intent(MainActivity.this, NavigationDrawer.class);
+            Intent intent = new Intent(MainActivity.this, TermsActivity.class);
             startActivity(intent);
         }
     };
@@ -80,4 +122,17 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         }
     };
+
+    private void drawBackground(Point Size) {
+        canvas.drawRGB(0xFF, 0xFF, 0xCC);
+        paint.setColor(Color.rgb(0x66,0x00,0x00));
+        final int space = 30;   //gap
+        int vertz = 0, hortz = 0;
+        for (int i = 0; i < 100; i++) {
+            canvas.drawLine(0, vertz, Size.x, vertz, paint);
+            canvas.drawLine(hortz, 0, hortz, Size.y, paint);
+            vertz += space;
+            hortz += space;
+        }
+    }
 }

@@ -6,4 +6,28 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
+
+    <string name="title_section1">Section 1</string>
+    <string name="title_section2">Section 2</string>
+    <string name="title_section3">Section 3</string>
+
+    <string name="title_activity_welcome">Home Screen</string>
+    <string name="next">NEXT</string>
+    <string name="skip">SKIP</string>
+    <string name="start">GOT IT</string>
+
+    <string name="slide_1_title">Swipe Your Finger</string>
+    <string name="slide_1_desc">Swipe to generate initial speed as fast as you can!</string>
+
+    <string name="slide_2_title">Shake Your Device</string>
+    <string name="slide_2_desc">Shake as fierce as you can to charge power to the block!</string>
+
+    <string name="slide_3_title">Master Your Evade</string>
+    <string name="slide_3_desc">Try not collapse with obstacles as possible as you can!</string>
+
+    <string name="slide_4_title">Gain Your Glory</string>
+    <string name="slide_4_desc">Reach the place as further as you can and let world knows you!</string>
+    <string name="reset_button">RESET</string>
+
+    <string name="terms">Terms</string>
 </resources>

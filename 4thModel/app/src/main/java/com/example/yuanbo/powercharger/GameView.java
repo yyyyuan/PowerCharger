@@ -3,10 +3,11 @@ package com.example.yuanbo.powercharger;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -18,68 +19,55 @@ import android.view.SurfaceView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Created by yuanbo on 10/21/17.
  */
 
-public class GameView extends SurfaceView implements Runnable, SensorEventListener {
-    // boolean variable to track if the game is playing or not
-    volatile boolean playing;
+public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Callback, SensorEventListener {
 
-    //the game thread
+    //context.
+    Context context;
+    //SensorManager
+    private SensorManager mSensorMgr = null;
+    private Sensor mSensor = null;
+    //game thread
     private Thread gameThread = null;
-
-    // adding player to this class
-    private Player player;
-
-    //These objects will be used for drawing
-    private Paint paint;
+    //draw
+    private Paint paint = new Paint();
     private Canvas canvas;
     private SurfaceHolder surfaceHolder;
-
-    //Adding an stars list
-    private ArrayList<Star> stars = new ArrayList<Star>();
-    //Adding enemies object array
-    private Enemy[] enemies;
-    //This shows the number of enemies.
-    private int enemyCount = 2;
-    //defining a boom object to display blast
-    private Boom boom;
-    //created a reference of the class Friend
-    private Friend friend;
-
-    //a screenX holder
-    int screenX;
-    //to count the number of Misses
-    int countMisses;
-    //indicator that the enemy has just entered the game screen
-    boolean flag;
-    //an indicator if the game is Over
-    private boolean isGameOver;
-    private boolean firstStage;
-
-    //Adding Scores
-    //the score holder
-    int score;
-    //the high Scores Holder
-    int highScore[] = new int[4];
-    //Shared Prefernces to store the High Scores
-    SharedPreferences sharedPreferences;
-
-    //the mediaplayer objects to configure the background music
+    //game parameter
+    private int playerWidth = 100;
+    private int playerHeight = 100;
+    private int enemyWidth = 200;
+    private int enemyHeight = 200;
+    private Spirit player;//player
+    private List<Spirit> enemyList = new ArrayList<>();//enemies
+    private long sleepTime = 10;
+    private int controlSpeed = 0;
+    private float sensorX = 0;
+    private float pSensorX = 0;
+    private int screenX, screenY;
+    private Random random = new Random();
+    //game status
+    private int status = 0;
+    private static int STATUS_INIT = 0;
+    private static int STATUS_PLAY = 1;
+    private static int STATUS_PAUSE = 2;
+    private static int STATUS_END = 3;
+    //game data
+    private int score = 0;
+    private float speed = 0;
+    private float distance = 0;
+    private int highScore[] = new int[4];
+    SharedPreferences sharedPreferences;//Shared Prefernces to store the High Scores
+    //game sound
     static MediaPlayer gameOnsound;
-    final MediaPlayer killedEnemysound;
-    final MediaPlayer gameOversound;
-
-    //context to be used in onTouchEvent to cause the activity transition from GameAvtivity to MainActivity.
-    Context context;
-
-    // point location needed to generate initial speed.
-    long start, end;
-    double x1, y1;
-    double x2, y2;
-    double distance;
+    static MediaPlayer gameOversound;
 
     // gravity control in first stage
     long startTime, endTime;
@@ -87,461 +75,247 @@ public class GameView extends SurfaceView implements Runnable, SensorEventListen
     double gx2, gy2, gz2;
     double gDistance;
     int totalSpeed;
-
-    /**
-     * SensorManager
-     **/
-    private SensorManager mSensorMgr = null;
-    Sensor mSensor = null;
-
-    private static final int SHAKE_THRESHOLD = 80;
-
-    /*
-    //Class constructor
-    public GameView(Context context) {
-        super(context);
-
-        // initialize the player
-        player = new Player(context);
-
-        //initializing drawing objects
-        surfaceHolder = getHolder();
-        paint = new Paint();
-    }
-    */
+    private static final int SHAKE_THRESHOLD = 800;
 
 
     public GameView(Context context, int screenX, int screenY) {
+        //init
         super(context);
-
-        this.screenX = screenX;
-        countMisses = 0;
-        isGameOver = false;
-
-        firstStage = true;
-
-        //initializing player object
-        //this time also passing screen size to player constructor
-        player = new Player(context, screenX, screenY);
-
-        //initializing drawing objects
-        surfaceHolder = getHolder();
-        paint = new Paint();
-
-        //adding 100 stars you may increase the number
-        int starNums = 100;
-        for (int i = 0; i < starNums; i++) {
-            Star s = new Star(screenX, screenY);
-            stars.add(s);
-        }
-
-        // Initializing enemy object array.
-        enemies = new Enemy[enemyCount];
-        for(int i = 0; i < enemyCount; i++){
-            enemies[i] = new Enemy(context, screenX, screenY);
-        }
-
-        //initializing boom object
-        boom = new Boom(context);
-        //initializing the Friend class object
-        friend = new Friend(context, screenX, screenY);
-
-        //setting the score to 0 initially
-        score = 0;
-        sharedPreferences = context.getSharedPreferences("SHAR_PREF_NAME",Context.MODE_PRIVATE);
-        //initializing the array high scores with the previous values
-        highScore[0] = sharedPreferences.getInt("score1",0);
-        highScore[1] = sharedPreferences.getInt("score2",0);
-        highScore[2] = sharedPreferences.getInt("score3",0);
-        highScore[3] = sharedPreferences.getInt("score4",0);
-
-        //initializing context
         this.context = context;
-        //initializing the media players for the game sounds
-        gameOnsound = MediaPlayer.create(context,R.raw.gameon);
-        killedEnemysound = MediaPlayer.create(context,R.raw.killedenemy);
-        gameOversound = MediaPlayer.create(context,R.raw.gameover);
-        //starting the game music as the game starts
-        gameOnsound.start();
-
-        // sensorManager
+        surfaceHolder = getHolder();
+        this.screenX = screenX;
+        this.screenY = screenY;
+        //init score
+        sharedPreferences = context.getSharedPreferences("SHAR_PREF_NAME", Context.MODE_PRIVATE);
+        highScore[0] = sharedPreferences.getInt("score1", 0);
+        highScore[1] = sharedPreferences.getInt("score2", 0);
+        highScore[2] = sharedPreferences.getInt("score3", 0);
+        highScore[3] = sharedPreferences.getInt("score4", 0);
+        //init sound
+        gameOnsound = MediaPlayer.create(context, R.raw.gameon);
+        gameOversound = MediaPlayer.create(context, R.raw.gameover);
+        //gameOnsound.start();
+        //init game
+        status = STATUS_INIT;
+        player = new Spirit(playerWidth, playerHeight, (screenX - playerWidth) / 2, screenY - playerHeight * 2, Color.argb(255, random.nextInt(255), random.nextInt(255), random.nextInt(255)), 0, screenX - playerWidth, 0, screenY);
+        //init screen
+        getHolder().addCallback(this);
+        //init sensorManager
         mSensorMgr = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         mSensor = mSensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorMgr.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_GAME);
-
     }
 
     @Override
     public void run() {
-        while (playing) {
-            if (firstStage) {
-                updateFirstStage();
-                drawFirstStage();
-                control();
-            }
-            else {
-                // to update the frame
-                update();
-
-                // to draw the frame
-                draw();
-
-                // to control
-                control();
-            }
+        while (status == STATUS_PLAY) {
+            //update the frame
+            update();
+            //draw the frame
+            draw();
+            //control
+            control();
         }
     }
+
+    private int addEnemyFlag = 0;
 
     private void update() {
-        score++;
-        player.update();
-
-        //setting boom outside the screen
-        boom.setX(-250);
-        boom.setY(-250);
-
-        //Updating the stars with player speed
-        for (Star s : stars) {
-            s.update(player.getSpeed());
-        }
-
-        //setting the flag true when the enemy just enters the screen
-        for (int i = 0; i < enemyCount; i++) {
-            if(enemies[i].getX()==screenX){
-                flag = true;
+        change();
+        if (speed <= 0) {
+        gameOver();
+    }
+    //add enemy
+        if (addEnemyFlag < distance / (enemyHeight + playerHeight * 4 + 2 * speed)) {
+        addEnemyFlag++;
+        enemyList.add(new Spirit(enemyWidth, enemyHeight, random.nextInt(screenX - enemyWidth), 0, Color.argb(255, random.nextInt(255), random.nextInt(255), random.nextInt(255)), 0, screenX - enemyWidth, 0, screenY));
+    }
+        //update player
+        player.update(player.getX() + controlSpeed, player.getY());
+        //update enemies
+        Iterator<Spirit> iterator = enemyList.iterator();
+        while (iterator.hasNext()) {
+            Spirit enemy = iterator.next();
+            enemy.update(enemy.getX(), (int) (enemy.getY() + speed));
+            //boom
+            if (player.impact(enemy)) {
+                //TODO stop or slow
+                iterator.remove();
+                speed *= 0.618;
+                //gameOver();
+            }
+            //out of screeen
+            if (enemy.getY() == enemy.getMaxY()) {
+                iterator.remove();
             }
         }
-
-
-        // updating the enemy coordinate with respect to player speed
-        for (int i = 0; i < enemyCount; i++) {
-            enemies[i].update(player.getSpeed());
-            if (Rect.intersects(player.getDetectCollision(), enemies[i].getDetectCollision())) {
-
-                //displaying boom at that location
-                boom.setX(enemies[i].getX());
-                boom.setY(enemies[i].getY());
-
-                //playing a sound at the collision between player and the enemy
-                killedEnemysound.start();
-                //moving enemy outside the left edge
-                enemies[i].setX(-200);
-                player.slowDown();
-            }// the condition where player misses the enemy
-        }
-
-        //updating the friend ships coordinates
-        friend.update(player.getSpeed());
-
-        //checking for a collision between player and a friend
-        if(Rect.intersects(player.getDetectCollision(), friend.getDetectCollision())){
-
-            //displaying the boom at the collision
-            boom.setX(friend.getX());
-            boom.setY(friend.getY());
-
-            friend.setX(-200);
-
-            /*
-            //setting playing false to stop the game
-            playing = false;
-            //setting the isGameOver true as the game is over
-            isGameOver = true;
-
-            //stopping the gameon music
-            gameOnsound.stop();
-            //play the game over sound
-            gameOversound.start();
-
-            //Assigning the scores to the highscore integer array
-            for(int j = 0; j < 4; j++){
-                if(highScore[j] < score){
-
-                    final int finalI = j;
-                    highScore[j] = score;
-                    break;
-                }
-            }
-            //storing the scores through shared Preferences
-            SharedPreferences.Editor e = sharedPreferences.edit();
-            for (int j = 0; j < 4; j++) {
-                int k = j + 1;
-                e.putInt("score" + k, highScore[j]);
-            }
-            e.apply();
-            */
-        }
-
-        if (player.getSpeed() < 0.5) {
-            //setting playing false to stop the game
-            playing = false;
-            //setting the isGameOver true as the game is over
-            isGameOver = true;
-
-            //stopping the gameon music
-            gameOnsound.stop();
-            //play the game over sound
-            gameOversound.start();
-
-            //Assigning the scores to the highscore integer array
-            for(int j = 0; j < 4; j++){
-                if(highScore[j] < score){
-
-                    final int finalI = j;
-                    highScore[j] = score;
-                    break;
-                }
-            }
-            //storing the scores through shared Preferences
-            SharedPreferences.Editor e = sharedPreferences.edit();
-            for (int j = 0; j < 4; j++) {
-                int k = j + 1;
-                e.putInt("score" + k, highScore[j]);
-            }
-            e.apply();
-        }
-
     }
 
-    private void updateFirstStage() {
-        player.update();
-
-        //Updating the stars with player speed
-        for (Star s : stars) {
-            s.update(player.getSpeed());
-        }
+    //TODO strategy
+    private void change() {
+        float dump = ((pSensorX - sensorX) * 150);
+        controlSpeed = (int) dump;//sensorX<0 move right;sensorX>0 move left
+        speed -= 0.1;//decrease gentle
+        distance += speed;
+        score = (int) distance / 1000;
     }
 
     private void draw() {
         //checking if surface is valid
         if (surfaceHolder.getSurface().isValid()) {
-            //locking the canvas
             canvas = surfaceHolder.lockCanvas();
-            //drawing a background color for canvas
-            canvas.drawColor(Color.BLACK);
-
-            //setting the paint color to white to draw the stars
-            paint.setColor(Color.WHITE);
-
-            //drawing all stars
-            for (Star s : stars) {
-                paint.setStrokeWidth(s.getStarWidth());
-                canvas.drawPoint(s.getX(), s.getY(), paint);
-            }
-
-            //drawing the score on the game screen
+            drawBackground();
+            //draw score
+            paint.setColor(Color.BLACK);
             paint.setTextSize(30);
             canvas.drawText("Score: " + score, 100, 50, paint);
-
-            //Drawing the player
-            canvas.drawBitmap(
-                    player.getBitmap(),
-                    player.getX(),
-                    player.getY(),
-                    paint);
-
-
-            //drawing the enemies
-            for (int i = 0; i < enemyCount; i++) {
-                canvas.drawBitmap(
-                        enemies[i].getBitmap(),
-                        enemies[i].getX(),
-                        enemies[i].getY(),
-                        paint
-                );
+            //draw player
+            canvas.drawBitmap(player.getBitmap(), player.getX(), player.getY(), paint);
+            //draw enemies
+            for (Spirit enemy : enemyList) {
+                canvas.drawBitmap(enemy.getBitmap(), enemy.getX(), enemy.getY(), paint);
             }
-
-            // Drawing the boom image
-            canvas.drawBitmap(
-                    boom.getBitmap(),
-                    boom.getX(),
-                    boom.getY(),
-                    paint
-            );
-
-            //drawing friends image
-            canvas.drawBitmap(
-                    friend.getBitmap(),
-                    friend.getX(),
-                    friend.getY(),
-                    paint
-            );
-
             //draw game Over when the game is over
-            if(isGameOver){
+            if (status == STATUS_END) {
                 paint.setTextSize(150);
                 paint.setTextAlign(Paint.Align.CENTER);
-
-                int yPos=(int) ((canvas.getHeight() / 2) - ((paint.descent() + paint.ascent()) / 2));
-                canvas.drawText("Game Over", canvas.getWidth()/2, yPos, paint);
+                int yPos = (int) ((canvas.getHeight() / 2) - ((paint.descent() + paint.ascent()) / 2));
+                canvas.drawText("Game Over", canvas.getWidth() / 2, yPos, paint);
             }
-
             //Unlocking the canvas
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
     }
 
-    private void drawFirstStage() {
-        //checking if surface is valid
-        if (surfaceHolder.getSurface().isValid()) {
-            //locking the canvas
-            canvas = surfaceHolder.lockCanvas();
-            //drawing a background color for canvas
-            canvas.drawColor(Color.BLACK);
-
-            //setting the paint color to white to draw the stars
-            paint.setColor(Color.WHITE);
-
-            //drawing all stars
-            for (Star s : stars) {
-                paint.setStrokeWidth(s.getStarWidth());
-                canvas.drawPoint(s.getX(), s.getY(), paint);
-            }
-
-            //drawing the score on the game screen
-            paint.setTextSize(30);
-            canvas.drawText("Score: " + score, 100, 50, paint);
-
-            //Drawing the player
-            canvas.drawBitmap(
-                    player.getBitmap(),
-                    player.getX(),
-                    player.getY(),
-                    paint);
-
-            // Draw the instruction for playing
-            canvas.drawText("Power Charging!", 0, 75, paint);
-
-            //Unlocking the canvas
-            surfaceHolder.unlockCanvasAndPost(canvas);
+    private void drawBackground() {
+        canvas.drawRGB(0xFF, 0xFF, 0xCC);
+        paint.setColor(Color.rgb(0x66,0x00,0x00));
+        final int space = 30;   //gap
+        int vertz = 0, hortz = 0;
+        for (int i = 0; i < 100; i++) {
+            canvas.drawLine(0, vertz, screenX, vertz, paint);
+            canvas.drawLine(hortz, 0, hortz, screenY, paint);
+            vertz += space;
+            hortz += space;
         }
+    }
+
+    private void gameOver() {
+        status = STATUS_END;
+        //Assigning the scores to the highscore integer array
+        for (int j = 0; j < 4; j++) {
+            if (highScore[j] < score) {
+
+                final int finalI = j;
+                highScore[j] = score;
+                break;
+            }
+        }
+        //storing the scores through shared Preferences
+        SharedPreferences.Editor e = sharedPreferences.edit();
+        for (int j = 0; j < 4; j++) {
+            int k = j + 1;
+            e.putInt("score" + k, highScore[j]);
+        }
+        e.apply();
     }
 
     private void control() {
         try {
-            gameThread.sleep(17);
+            gameThread.sleep(sleepTime);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public void pause() {
-        //when the game is paused
-        //setting the variable to false
-        playing = false;
-        try {
-            //stopping the thread
-            gameThread.join();
-        } catch (InterruptedException e) {
-        }
+    //stop the music on exit
+    public static void stopMusic() {
+        gameOnsound.stop();
     }
 
-    public void resume() {
-        playing = true;
-        gameThread = new Thread(this);
-        gameThread.start();
-
-    }
+    private float initX;
+    private float initY;
+    private long then;
 
     @Override
-    public boolean onTouchEvent(MotionEvent motionEvent) {
-        float location = motionEvent.getX();
+    public boolean onTouchEvent(MotionEvent event) {
+        //init speed
+        if (status == STATUS_INIT) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                then = System.currentTimeMillis();
+                initX = event.getX();
+                initY = event.getY();
+                return true;
+            } else if (event.getAction() == MotionEvent.ACTION_UP) {
 
-        if (firstStage) { // For FirstStage
-            //    Toast.makeText(getContext(), "This is my Toast message!",
-            //            Toast.LENGTH_SHORT).show();
-            int speed = generateSpeed(motionEvent);
-            player.sethSpeed(speed);
+                float distance = calculateDistance(event.getX() - initX, event.getY() - initY);
 
-            if (player.getSpeed() > 0) firstStage = !firstStage;
-        }
-        else {
-            switch (motionEvent.getAction()) {
-
-                case MotionEvent.ACTION_UP:
-                    //stopping the boosting when screen is released
-                    player.stop();
-                    break;
-                case MotionEvent.ACTION_DOWN:
-                    //boosting the space jet when screen is pressed
-                    player.sethBoosting();
-
-                    if (location <= screenX / 2) {
-                        player.setBoosting();
-                    }
-                    else {
-                        player.stopBoosting();
-                    }
-                    break;
-                case MotionEvent.ACTION_POINTER_DOWN:
-                    //boosting the space jet when screen is pressed
-                    player.sethBoosting();
-
-                    if (location <= screenX / 2) {
-                        player.setBoosting();
-                    }
-                    else {
-                        player.stopBoosting();
-                    }
-                    break;
-                case MotionEvent.ACTION_POINTER_UP:
-                    //stopping the boosting when screen is released
-                    player.stop();
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    player.sethBoosting();
-
-                    if (location <= screenX / 2) {
-                        player.setBoosting();
-                    }
-                    else {
-                        player.stopBoosting();
-                    }
-                    break;
+                speed = distance / (System.currentTimeMillis() - then) * 10;
+                Toast.makeText(getContext(), "shake detected w/ speed: " + speed, Toast.LENGTH_SHORT).show();
+                status = STATUS_PLAY;
+                gameThread = new Thread(this);
+                gameThread.start();
+                return true;
+            }
+        } else if (status == STATUS_END) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                context.startActivity(new Intent(context, MainActivity.class));
             }
         }
+        return false;
+    }
 
-        //if the game's over, tappin on game Over screen sends you to MainActivity
-        if(isGameOver){
-            if(motionEvent.getAction() == MotionEvent.ACTION_DOWN){
-                context.startActivity(new Intent(context,MainActivity.class));
-            }
-        }
-
-        return true;
+    private float calculateDistance(float x, float y) {
+        float sum = x * x + y * y;
+        float result = (float) Math.pow(sum, 0.5);
+        return result;
     }
 
     // generate speed using gravity accelerator.
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        if (firstStage) {
-            endTime = System.currentTimeMillis();
-            if (endTime - startTime > 100) {
-                long diffTime = endTime - startTime;
-                startTime = endTime;
+        if (status == STATUS_INIT) {
+            generateSpeedSensor(sensorEvent);
+        }
 
-                gx1 = sensorEvent.values[0] / SensorManager.GRAVITY_EARTH;
-                gy1 = sensorEvent.values[1] / SensorManager.GRAVITY_EARTH;
-                gz1 = sensorEvent.values[2] / SensorManager.GRAVITY_EARTH;
+        if (status == STATUS_PLAY) {
+            pSensorX = sensorX;
+            sensorX = sensorEvent.values[0];
+        }
+    }
 
-                gDistance = calculateDistance(gx1 - gx2, gy1 - gy2, gz1 - gz2);
-                double speed = (gDistance / diffTime) * 10000;
+    private void generateSpeedSensor(SensorEvent sensorEvent) {
+        endTime = System.currentTimeMillis();
+        if (endTime - startTime > 100) {
+            long diffTime = endTime - startTime;
+            startTime = endTime;
 
-                if (speed > SHAKE_THRESHOLD) {
-                    //Toast.makeText(getContext(), "shake detected w/ speed: " + speed, Toast.LENGTH_SHORT).show();
-                    totalSpeed += speed;
-                }
-                else if (speed < SHAKE_THRESHOLD && totalSpeed > 0) {
-                    firstStage = !firstStage;
-                    Toast.makeText(getContext(), "Total Speed: " + totalSpeed, Toast.LENGTH_SHORT).show();
-                    player.sethSpeed(totalSpeed);
-                }
+            gx1 = sensorEvent.values[0];
+            gy1 = sensorEvent.values[1];
+            gz1 = sensorEvent.values[2];
+
+            gDistance = calculateDistance(gx1 - gx2, gy1 - gy2, gz1 - gz2);
+            double tempSpeed = (gDistance / diffTime) * 10000;
+            //Toast.makeText(getContext(), "shake detected w/ speed: " + tempSpeed, Toast.LENGTH_SHORT).show();
 
 
-                gx2 = gx1;
-                gy2 = gy1;
-                gz2 = gz1;
+            if (tempSpeed > SHAKE_THRESHOLD) {
+                //Toast.makeText(getContext(), "shake detected w/ speed: " + tempSpeed, Toast.LENGTH_SHORT).show();
+                totalSpeed += tempSpeed;
+            } else if (tempSpeed < SHAKE_THRESHOLD && totalSpeed > 0) {
+                speed = totalSpeed / 200;
+                status = STATUS_PLAY;
+                Toast.makeText(getContext(), "Total Speed: " + totalSpeed, Toast.LENGTH_SHORT).show();
+                totalSpeed = 0;
+                gameThread = new Thread(this);
+                gameThread.start();
+                return;
             }
+
+
+            gx2 = gx1;
+            gy2 = gy1;
+            gz2 = gz1;
         }
     }
 
@@ -552,40 +326,25 @@ public class GameView extends SurfaceView implements Runnable, SensorEventListen
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
-
     }
 
-    // generate speed using finger movement
-    private int generateSpeed(MotionEvent motionEvent) {
-        int hSpeed = 0;
-        boolean flag = false;   // Flag to detect ACTION_UP
-
-        switch (motionEvent.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                start = System.currentTimeMillis();
-                x1 = motionEvent.getX();
-                y1 = motionEvent.getY();
-                break;
-            case MotionEvent.ACTION_UP:
-                flag = true;
-
-                end = System.currentTimeMillis();
-                x2 = motionEvent.getX();
-                y2 = motionEvent.getY();
-
-                double square = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-                distance = Math.pow(square, 0.5);
-                double time = end - start;
-                hSpeed = (int) (distance / time * 61.8);
-                Toast.makeText(getContext(), "Total Speed: " + hSpeed, Toast.LENGTH_SHORT).show();
-                break;
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        if (surfaceHolder.getSurface().isValid()) {
+            canvas = surfaceHolder.lockCanvas();
+            drawBackground();
+            Bitmap arrow = BitmapFactory.decodeResource(context.getResources(), R.drawable.arrow);
+            canvas.drawBitmap(player.getBitmap(), player.getX(), player.getY(), paint);
+            canvas.drawBitmap(arrow, (screenX - arrow.getWidth()) / 2, player.getY() - playerHeight - arrow.getHeight(), paint);
+            surfaceHolder.unlockCanvasAndPost(canvas);
         }
-
-        return (flag) ? (hSpeed == 0 ? 10 : hSpeed) : 0;
     }
 
-    //stop the music on exit
-    public static void stopMusic(){
-        gameOnsound.stop();
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
     }
 }

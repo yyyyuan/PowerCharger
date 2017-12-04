@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 public class HighScore extends AppCompatActivity {
 
-    TextView textView,textView2,textView3,textView4;
+    TextView textView, textView2, textView3, textView4;
     SharedPreferences sharedPreferences;
 
     @Override
@@ -26,13 +26,13 @@ public class HighScore extends AppCompatActivity {
         textView3 = (TextView) findViewById(R.id.textView3);
         textView4 = (TextView) findViewById(R.id.textView4);
 
-        sharedPreferences  = getSharedPreferences("SHAR_PREF_NAME", Context.MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences("SHAR_PREF_NAME", Context.MODE_PRIVATE);
 
         //setting the values to the textViews
-        textView.setText("1. "+sharedPreferences.getInt("score1",0));
-        textView2.setText("2. "+sharedPreferences.getInt("score2",0));
-        textView3.setText("3. "+sharedPreferences.getInt("score3",0));
-        textView4.setText("4. "+sharedPreferences.getInt("score4",0));
+        textView.setText("1. " + sharedPreferences.getInt("score1", 0));
+        textView2.setText("2. " + sharedPreferences.getInt("score2", 0));
+        textView3.setText("3. " + sharedPreferences.getInt("score3", 0));
+        textView4.setText("4. " + sharedPreferences.getInt("score4", 0));
 
 
     }

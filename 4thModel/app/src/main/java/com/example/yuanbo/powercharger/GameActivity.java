@@ -2,11 +2,14 @@ package com.example.yuanbo.powercharger;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Display;
+import android.view.SurfaceView;
 
 public class GameActivity extends AppCompatActivity {
 
@@ -23,23 +26,10 @@ public class GameActivity extends AppCompatActivity {
         Point size = new Point();
         display.getSize(size);
 
-
         // Initialize gameview object
         //this time we are also passing the screen size to the GameView constructor
         gameview = new GameView(this, size.x, size.y);
         setContentView(gameview);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        gameview.pause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        gameview.resume();
     }
 
     @Override
